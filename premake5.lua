@@ -25,6 +25,11 @@ project "ImGui"
         "misc/cpp/imgui_stdlib.cpp"
     }
 
+    defines
+    {
+        "IMGUI_ENABLE_TEST_ENGINE"
+    }
+
     includedirs
     {
         "."
