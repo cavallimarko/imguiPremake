@@ -25,10 +25,10 @@ project "ImGui"
         "misc/cpp/imgui_stdlib.cpp"
     }
 
-    defines
-    {
-        "IMGUI_ENABLE_TEST_ENGINE"
-    }
+    -- Only enable test engine hooks when ImGui Test Engine is used (set in Dependencies.lua)
+    if enable_imgui_test_engine then
+        defines { "IMGUI_ENABLE_TEST_ENGINE" }
+    end
 
     includedirs
     {
