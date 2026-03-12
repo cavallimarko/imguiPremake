@@ -22,7 +22,11 @@ project "ImGui"
         "imstb_truetype.h",
         "imgui_demo.cpp",
         "misc/cpp/imgui_stdlib.h",
-        "misc/cpp/imgui_stdlib.cpp"
+        "misc/cpp/imgui_stdlib.cpp",
+
+        -- Renderer backend (shared between GLFW and SDL3 paths)
+        "backends/imgui_impl_opengl3.h",
+        "backends/imgui_impl_opengl3.cpp",
     }
 
     -- Only enable test engine hooks when ImGui Test Engine is used (set in Dependencies.lua)
@@ -32,8 +36,32 @@ project "ImGui"
 
     includedirs
     {
-        "."
+        ".",
+        "%{IncludeDir.Glad}",
     }
+
+    -- Platform backend is selected based on window backend
+    if window_backend == "GLFW" then
+        files
+        {
+            "backends/imgui_impl_glfw.h",
+            "backends/imgui_impl_glfw.cpp",
+        }
+        includedirs
+        {
+            "%{IncludeDir.GLFW}",
+        }
+    elseif window_backend == "SDL3" then
+        files
+        {
+            "backends/imgui_impl_sdl3.h",
+            "backends/imgui_impl_sdl3.cpp",
+        }
+        includedirs
+        {
+            "%{IncludeDir.SDL3}",
+        }
+    end
     
     filter "system:windows"
         systemversion "latest"
