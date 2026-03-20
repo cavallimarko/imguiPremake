@@ -24,9 +24,11 @@ project "ImGui"
         "misc/cpp/imgui_stdlib.h",
         "misc/cpp/imgui_stdlib.cpp",
 
-        -- Renderer backend (shared between GLFW and SDL3 paths)
+        -- Renderer backends (OpenGL always, Vulkan when used by engine)
         "backends/imgui_impl_opengl3.h",
         "backends/imgui_impl_opengl3.cpp",
+        "backends/imgui_impl_vulkan.h",
+        "backends/imgui_impl_vulkan.cpp",
     }
 
     -- Only enable test engine hooks when ImGui Test Engine is used (set in Dependencies.lua)
@@ -38,6 +40,7 @@ project "ImGui"
     {
         ".",
         "%{IncludeDir.Glad}",
+        "%{IncludeDir.VulkanSDK}",
     }
 
     -- Platform backend is selected based on window backend
