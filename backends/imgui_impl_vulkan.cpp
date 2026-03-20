@@ -528,6 +528,57 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline 
     }
 }
 
+// Forward declare (defined after RenderDrawData)
+static void ImGui_ImplVulkan_DestroyTexture(ImTextureData* tex);
+
+static ImVector<ImTextureData*> g_ImGuiDeferredTextureDestroys;
+
+static void ImGui_ImplVulkan_DeferDestroyTexture(ImTextureData* tex)
+{
+    if (tex == nullptr)
+        return;
+    for (int i = 0; i < g_ImGuiDeferredTextureDestroys.Size; i++)
+        if (g_ImGuiDeferredTextureDestroys[i] == tex)
+            return;
+    g_ImGuiDeferredTextureDestroys.push_back(tex);
+}
+
+bool ImGui_ImplVulkan_HasDeferredTextureDestroys(void)
+{
+    return g_ImGuiDeferredTextureDestroys.Size > 0;
+}
+
+void ImGui_ImplVulkan_FlushDeferredTextureDestroys(void)
+{
+    if (g_ImGuiDeferredTextureDestroys.Size == 0)
+        return;
+    ImVector<ImTextureData*> batch;
+    batch.swap(g_ImGuiDeferredTextureDestroys);
+    for (int n = 0; n < batch.Size; n++)
+    {
+        ImTextureData* tex = batch[n];
+        if (tex != nullptr && tex->Status == ImTextureStatus_WantDestroy)
+            ImGui_ImplVulkan_DestroyTexture(tex);
+    }
+}
+
+static void ImGui_ImplVulkan_ScheduleDeferredTextureDestroys(ImDrawData* draw_data)
+{
+    if (draw_data == nullptr || draw_data->Textures == nullptr)
+        return;
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    if (bd == nullptr)
+        return;
+    const int threshold = (int)bd->VulkanInitInfo.ImageCount;
+    ImVector<ImTextureData*>* textures = draw_data->Textures;
+    for (int n = 0; n < textures->Size; n++)
+    {
+        ImTextureData* tex = (*textures)[n];
+        if (tex != nullptr && tex->Status == ImTextureStatus_WantDestroy && tex->UnusedFrames >= threshold)
+            ImGui_ImplVulkan_DeferDestroyTexture(tex);
+    }
+}
+
 // Render function
 void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline)
 {
@@ -680,6 +731,10 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     // We perform a call to vkCmdSetScissor() to set back a full viewport which is likely to fix things for 99% users but technically this is not perfect. (See github #4644)
     VkRect2D scissor = { { 0, 0 }, { (uint32_t)fb_width, (uint32_t)fb_height } };
     vkCmdSetScissor(command_buffer, 0, 1, &scissor);
+
+    // Queue WantDestroy textures; vkFreeDescriptorSets must not run while sets are still bound on this command buffer
+    // (subsequent app draws reuse the same CB). Flush happens in ProcessDeferredDestructions after WaitForInFlightFrames.
+    ImGui_ImplVulkan_ScheduleDeferredTextureDestroys(draw_data);
 }
 
 static void ImGui_ImplVulkan_DestroyTexture(ImTextureData* tex)
@@ -906,8 +961,28 @@ void ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex)
         tex->SetStatus(ImTextureStatus_OK);
     }
 
-    if (tex->Status == ImTextureStatus_WantDestroy && tex->UnusedFrames >= (int)bd->VulkanInitInfo.ImageCount)
-        ImGui_ImplVulkan_DestroyTexture(tex);
+    // Texture destruction is deferred to ImGui_ImplVulkan_RenderDrawData() after draw commands are recorded,
+    // so VkDescriptorSet handles in ImDrawCmd are not freed while still bound this frame.
+}
+
+static void ImGui_ImplVulkan_DestroyPendingTexturesAfterDraw(ImDrawData* draw_data)
+{
+    if (draw_data == nullptr || draw_data->Textures == nullptr)
+        return;
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    if (bd == nullptr)
+        return;
+    const int threshold = (int)bd->VulkanInitInfo.ImageCount;
+    ImVector<ImTextureData*>* textures = draw_data->Textures;
+    ImVector<ImTextureData*> to_destroy;
+    for (int n = 0; n < textures->Size; n++)
+    {
+        ImTextureData* tex = (*textures)[n];
+        if (tex != nullptr && tex->Status == ImTextureStatus_WantDestroy && tex->UnusedFrames >= threshold)
+            to_destroy.push_back(tex);
+    }
+    for (int n = 0; n < to_destroy.Size; n++)
+        ImGui_ImplVulkan_DestroyTexture(to_destroy[n]);
 }
 
 static void ImGui_ImplVulkan_CreateShaderModules(VkDevice device, const VkAllocationCallbacks* allocator)
@@ -1306,6 +1381,8 @@ void ImGui_ImplVulkan_Shutdown()
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     IM_ASSERT(bd != nullptr && "No renderer backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
+
+    ImGui_ImplVulkan_FlushDeferredTextureDestroys();
 
     // First destroy objects in all viewports
     ImGui_ImplVulkan_DestroyDeviceObjects();

@@ -117,6 +117,9 @@ IMGUI_IMPL_API void             ImGui_ImplVulkan_SetMinImageCount(uint32_t min_i
 
 // (Advanced) Use e.g. if you need to precisely control the timing of texture updates (e.g. for staged rendering), by setting ImDrawData::Textures = NULL to handle this manually.
 IMGUI_IMPL_API void             ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex);
+// Textures marked WantDestroy are queued from RenderDrawData and freed here after GPU idle (see ProcessDeferredDestructions).
+IMGUI_IMPL_API bool            ImGui_ImplVulkan_HasDeferredTextureDestroys(void);
+IMGUI_IMPL_API void            ImGui_ImplVulkan_FlushDeferredTextureDestroys(void);
 
 // Register a texture (VkDescriptorSet == ImTextureID)
 // FIXME: This is experimental in the sense that we are unsure how to best design/tackle this problem
