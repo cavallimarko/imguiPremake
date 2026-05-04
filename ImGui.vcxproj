@@ -75,7 +75,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>TRACY_ENABLE;IMGUI_ENABLE_TEST_ENGINE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TRACY_ENABLE;TRACY_NO_ALLOC;IMGUI_ENABLE_TEST_ENGINE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\tracy\public;.;..\Glad\include;C:\VulkanSDK\1.4.313.0\Include;..\SDL3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
@@ -95,7 +95,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>TRACY_ENABLE;IMGUI_ENABLE_TEST_ENGINE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TRACY_ENABLE;TRACY_NO_ALLOC;IMGUI_ENABLE_TEST_ENGINE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\tracy\public;.;..\Glad\include;C:\VulkanSDK\1.4.313.0\Include;..\SDL3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
